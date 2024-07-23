@@ -1,0 +1,123 @@
+Menu="hidden"
+Title="Community Applications"
+Icon="community.applications.png"
+---
+<?
+###############################################################
+#                                                             #
+# Community Applications copyright 2015-2019, Andrew Zawadzki #
+#                    All Rights Reserved                      #
+#                                                             #
+###############################################################
+
+function download_url($url, $path = "", $bg = false)
+{
+	exec("curl --compressed --max-time 60 --silent --insecure --location --fail ".($path ? " -o '$path' " : "")." $url ".($bg ? ">/dev/null 2>&1 &" : "2>/dev/null"), $out, $exit_code );
+	return ($exit_code === 0 ) ? implode("\n", $out) : false;
+}
+
+$vars = parse_ini_file("/var/local/emhttp/var.ini");
+
+$plugin = "community.applications";
+$cfg = parse_plugin_cfg($plugin);
+
+# Get the available repositories and setup the display for favourites
+
+@mkdir("/tmp/community.applications/tempFiles",0777,true);
+
+$Repositories = "/tmp/community.applications/tempFiles/Repositories.json";
+download_url("https://raw.githubusercontent.com/Squidly271/Community-Applications-Moderators/master/Repositories.json",$Repositories);
+$Repos = json_decode(@file_get_contents($Repositories),true);
+
+if ( ! $Repos ) {
+	$Repos = array();
+}
+
+$repoName = array();
+foreach ($Repos as $Repo) {
+	$repoName[] = $Repo['name'];
+}
+natcasesort($repoName);
+
+$displayOptions = mk_option($cfg['favourite'], "None", "None (default)");
+
+foreach ($repoName as $display1) {
+	$optionName = str_replace("'","*",$display1);
+	$displayOptions .= mk_option($cfg['favourite'], $optionName, $display1);
+}
+
+?>
+
+<form markdown="1" method="POST" action="/update.php" target="progressFrame">
+<input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
+
+Hover Time delay (miliseconds):
+: <input type="number" name="hoverTime" class="narrow" maxlength="5" value="<?=$cfg['hoverTime']?>" placeholder="1000">
+
+> This setting determines how long you have to hover over any element prior to the pop up appearing
+
+Favourite Repository:
+: <select name="favourite" size="1">
+	<?=$displayOptions?>
+	</select>
+
+> Set this option to your favourite repository, so that it's applications will display first
+
+Show already installed apps within available apps:
+: <select name='separateInstalled' size='1'>
+	<?=mk_option($cfg['separateInstalled'], "true", "No (default)")?>
+	<?=mk_option($cfg['separateInstalled'], "false", "Yes")?>
+	</select>
+
+> This setting determines if already installed applications will also appear when displaying available apps
+ 
+Hide Deprecated Applications:
+: <select name='hideDeprecated' size='1'>
+	<?=mk_option($cfg['hideDeprecated'], "true", "Yes (default)")?>
+	<?=mk_option($cfg['hideDeprecated'], "false", "No")?>
+	</select>
+
+> This setting hides deprecated applications from the list of available apps.  Deprecated apps will still however display within the <em>installed</em> and <em>previous</em> apps sections.
+	
+Hide Incompatible Applications:
+: <select name='hideIncompatible' size='1'>
+	<?=mk_option($cfg['hideIncompatible'], "true", "Yes (default)")?>
+	<?=mk_option($cfg['hideIncompatible'], "false", "No")?>
+	</select>
+
+> This setting will hide applications that are listed as being incompatible with your version of unRaid
+
+Only request https (secure) images (when accessing server via https):
+: <select name='secureImage' size='1'>
+	<?=mk_option($cfg['secureImage'],'all','Display all images (default)')?>
+	<?=mk_option($cfg['secureImage'],'secure',"Don't display insecure images")?>
+	</select>
+	
+> When accessing your server via https, this option will not display any icon for the applications if it is not able to be displayed via https)  Note that the icon will still be displayed if the remote server does an automatic redirection from https to http 
+
+Disable mobile UI enhancements:
+: <select name='mobileAllowed' size='1'>
+	<?=mk_option($cfg['mobileAllowed'],"true", "No (default)")?>
+	<?=mk_option($cfg['mobileAllowed'],"false", "Yes")?>
+	</select>
+	
+> If you have problems with swiping to change pages, then disable the mobile UI enhancements
+
+<strong>Docker Hub Searching</strong>
+
+Enable additional search results from dockerHub?
+: <select name="dockerSearch" size="1">
+	<?=mk_option($cfg['dockerSearch'], "no", "No (Default)")?>
+	<?=mk_option($cfg['dockerSearch'], "yes", "Yes")?>
+	</select>
+
+> This setting enables CA to retrieve additional search results from dockerHub.  Note that docker must be enabled for this to be operational
+
+&nbsp;
+: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+
+<center>For support for this plugin, visit here: <a href="https://forums.unraid.net/topic/38582-plug-in-community-applications/" target="_blank">HERE</a></center>
+
+</form>
+<center><a href='https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7M7CBCVU732XG' target='_blank'><img src="https://github.com/Squidly271/community.applications/raw/master/webImages/donate-button.png" height=40px;></a></center>
+
